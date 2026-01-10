@@ -1,27 +1,28 @@
-import  statistics as stats
-def calculate_statistics(data):
-    mean = stats.mean(data)
-    median = stats.median(data)
-    try:
-        mode = stats.mode(data)
-    except stats.StatisticsError:
-        mode = "No unique mode"
-    return mean, median, mode
+from flask import Flask, render_template, request
+import pickle
+import numpy as np
 
-def compute_dispersion(data):
-    variance = stats.variance(data)
-    std_dev = stats.stdev(data)
-    return variance, std_dev
+app = Flask(__name__)
 
-def main():
-    data = [13,14,15,18,19,20,25,38]
-    mean, median, mode = calculate_statistics(data)
-    variance, std_dev = compute_dispersion(data)
+model = pickle.load(open('churn_model.pkl', 'rb'))
 
-    print(f"Mean: {mean}")
-    print(f"Median: {median}")
-    print(f"Mode: {mode}")
-    print(f"Variance: {variance}")
-    print(f"Standard Deviation: {std_dev}")
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    tenure = int(request.form['tenure'])
+
+    # Create correct input shape (21 features)
+    input_data = np.zeros((1, 21))
+    input_data[0][0] = tenure
+
+    prediction = model.predict(input_data)
+
+    result = "Customer is likely to Churn" if prediction[0] == 1 else "Customer is likely to Stay"
+
+    return render_template('index.html', prediction_text=result)
+
 if __name__ == "__main__":
-    main()
+    app.run(debug=True)
